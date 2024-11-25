@@ -1,0 +1,15 @@
+[
+  {
+    "id": 2,
+    "title": "Laptop HP",
+    "description": "Laptop de alto rendimiento",
+    "code": "HP123",
+    "price": 1200,
+    "stock": 15,
+    "category": "Laptops",
+    "thumbnails": [
+      "hp-laptop.jpg"
+    ],
+    "status": true
+  }
+]
