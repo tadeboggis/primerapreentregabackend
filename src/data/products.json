@@ -11,5 +11,16 @@
       "hp-laptop.jpg"
     ],
     "status": true
+  },
+  {
+    "id": 3,
+    "title": "MacBook Air",
+    "description": "",
+    "code": "",
+    "price": 1500,
+    "stock": 10,
+    "category": "Laptops",
+    "thumbnails": [],
+    "status": true
   }
 ]

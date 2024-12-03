@@ -8,12 +8,14 @@ if (!fs.existsSync(filePath)) {
     console.log('Archivo products.json creado');
 }
 
+const readProducts = () => JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
+const writeProducts = (products) => fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
+
 router.get('/', (req, res) => {
-    console.log('GET /api/products solicitado');
     try {
-        const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        const limit = parseInt(req.query.limit) || products.length;
-        res.json(products.slice(0, limit));
+        const products = readProducts();
+        res.json(products);
     } catch (error) {
         console.error('Error al leer productos:', error);
         res.status(500).json({ message: 'Error al leer los productos' });
@@ -21,9 +23,8 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:pid', (req, res) => {
-    console.log(`GET /api/products/${req.params.pid} solicitado`);
     try {
-        const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        const products = readProducts();
         const product = products.find(p => p.id === parseInt(req.params.pid));
         if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
         res.json(product);
@@ -34,16 +35,30 @@ router.get('/:pid', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-    console.log('POST /api/products solicitado');
     try {
-        const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        const { title, description, code, price, stock, category, thumbnails } = req.body;
+        if (!title || !price || !stock || !category) {
+            return res.status(400).json({ message: 'Todos los campos obligatorios deben estar presentes' });
+        }
+
+        const products = readProducts();
         const newProduct = {
             id: products.length ? products[products.length - 1].id + 1 : 1,
-            ...req.body,
+            title,
+            description: description || '',
+            code: code || '',
+            price,
+            stock,
+            category,
+            thumbnails: thumbnails || [],
             status: true,
         };
+
         products.push(newProduct);
-        fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
+        writeProducts(products);
+
+        req.io.emit('updateProducts', products);
+
         res.status(201).json(newProduct);
     } catch (error) {
         console.error('Error al crear producto:', error);
@@ -51,31 +66,20 @@ router.post('/', (req, res) => {
     }
 });
 
-router.put('/:pid', (req, res) => {
-    console.log(`PUT /api/products/${req.params.pid} solicitado`);
-    try {
-        const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        const productIndex = products.findIndex(p => p.id === parseInt(req.params.pid));
-        if (productIndex === -1) return res.status(404).json({ message: 'Producto no encontrado' });
-        products[productIndex] = { ...products[productIndex], ...req.body };
-        fs.writeFileSync(filePath, JSON.stringify(products, null, 2));
-        res.json(products[productIndex]);
-    } catch (error) {
-        console.error('Error al actualizar producto:', error);
-        res.status(500).json({ message: 'Error al actualizar el producto' });
-    }
-});
-
 router.delete('/:pid', (req, res) => {
-    console.log(`DELETE /api/products/${req.params.pid} solicitado`);
     try {
-        const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        const products = readProducts();
         const filteredProducts = products.filter(p => p.id !== parseInt(req.params.pid));
+
         if (products.length === filteredProducts.length) {
             return res.status(404).json({ message: 'Producto no encontrado' });
         }
-        fs.writeFileSync(filePath, JSON.stringify(filteredProducts, null, 2));
-        res.status(204).end();
+
+        writeProducts(filteredProducts);
+
+        req.io.emit('updateProducts', filteredProducts);
+
+        res.status(200).json({ message: 'Producto eliminado correctamente' });
     } catch (error) {
         console.error('Error al eliminar producto:', error);
         res.status(500).json({ message: 'Error al eliminar el producto' });
